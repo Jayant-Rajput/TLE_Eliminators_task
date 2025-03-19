@@ -33,12 +33,11 @@ export const fetchDataAndUpdateDB = async () => {
 
     await addContestsToDB(allDetails);
     await updateFinishedContests();
+    await addYtLinks();
   } catch (error) {
     console.log("ERROR in fetchDataAndUpdateDB function : ", error);
   }
 };
-
-
 
 const addContestsToDB = async (contests) => {
   try {
@@ -136,7 +135,9 @@ const leetCodeContestList = async () => {
 };
 
 const forcesContestDataFetch = async () => {
-  const response = await axios.get("https://codeforces.com/api/contest.list?gym=false");
+  const response = await axios.get(
+    "https://codeforces.com/api/contest.list?gym=false"
+  );
   const contestData = response.data.result;
   const contests = [];
   let cnt = 0;
@@ -151,7 +152,7 @@ const forcesContestDataFetch = async () => {
       const duration_milliseconds = duration_seconds * 1000;
       const phase = data["phase"];
 
-      if (phase !== "BEFORE") cnt++; 
+      if (phase !== "BEFORE") cnt++;
       contests.push({
         title,
         platform: "Codeforces",
@@ -159,7 +160,7 @@ const forcesContestDataFetch = async () => {
         raw_start_time: start_time_milliseconds,
         raw_duration: duration_milliseconds,
       });
-      if(cnt===5) break;      // Stop iteration after taking 5 past contests //for each loop me break nhi hota.
+      if (cnt === 5) break; // Stop iteration after taking 5 past contests //for each loop me break nhi hota.
     }
   }
 
@@ -167,33 +168,100 @@ const forcesContestDataFetch = async () => {
 };
 
 const codechefContestList = async () => {
-    const response = await axios.get("https://www.codechef.com/api/list/contests/all");
-    const presentContests = response.data.present_contests;
-    const futureContests = response.data.future_contests;
-    const pastContests = response.data.past_contests;
-    pastContests.splice(5);
-    const contests = [];
+  const response = await axios.get(
+    "https://www.codechef.com/api/list/contests/all"
+  );
+  const presentContests = response.data.present_contests;
+  const futureContests = response.data.future_contests;
+  const pastContests = response.data.past_contests;
+  pastContests.splice(5);
+  const contests = [];
 
-    if (response.status === 200) {
-      const contests_data = [...futureContests, ...pastContests];
-      contests_data.forEach((data) => {
-        const title = data["contest_name"];
-        const url = `https://www.codechef.com/${data["contest_code"]}`;
-        const start_date = data["contest_start_date"];
-        const dateObject = new Date(start_date);
-        const start_date_millisecond = dateObject.getTime();
-        const durationInMinutes = data["contest_duration"];
-        const duration_millisecond = durationInMinutes*60*1000;
+  if (response.status === 200) {
+    const contests_data = [...futureContests, ...pastContests];
+    contests_data.forEach((data) => {
+      const title = data["contest_name"];
+      const url = `https://www.codechef.com/${data["contest_code"]}`;
+      const start_date = data["contest_start_date"];
+      const dateObject = new Date(start_date);
+      const start_date_millisecond = dateObject.getTime();
+      const durationInMinutes = data["contest_duration"];
+      const duration_millisecond = durationInMinutes * 60 * 1000;
 
-        contests.push({
-          title,
-          platform: "CodeChef",
-          url,
-          raw_start_time: start_date_millisecond,
-          reg_participants: data["distinct_users"],
-          raw_duration: duration_millisecond,
-        });
+      contests.push({
+        title,
+        platform: "CodeChef",
+        url,
+        raw_start_time: start_date_millisecond,
+        reg_participants: data["distinct_users"],
+        raw_duration: duration_millisecond,
       });
+    });
+  }
+  return contests;
+};
+
+const addYtLinks = async () => {
+  let response;
+  const channelId = "UCqL-fzHtN3NQPbYqGymMbTA";
+  try {
+    response = await axios.get("https://www.googleapis.com/youtube/v3/search", {
+      params: {
+        part: "snippet",
+        channelId: channelId,
+        maxResults: 5,
+        order: "date", // To get the latest videos
+        key: process.env.API_KEY,
+      },
+    });
+  } catch (error) {
+    console.log("ERROR in fetching youtube videos", error);
+  }
+
+  const videos = extractVideos(response.data.items);
+
+  await updateContestLinks(videos);
+};
+
+const extractVideos = (responseData) => {
+  return responseData.map((video) => ({
+    title: video.snippet.title,
+    link: `https://www.youtube.com/watch?v=${video.id.videoId}`,
+  }));
+};
+
+const updateContestLinks = async (videos) => {
+  for (const video of videos) {
+    const relevantPart = extractRelevantPart(video.title);
+    if (relevantPart) {
+      const contest = await Contest.findOne({
+        title: { $regex: relevantPart, $options: "i" },
+      });
+
+      if (contest) {
+        contest.solutionLink = video.link;
+        await contest.save();
+        console.log(`updated contest: ${contest.title}`)
+      }
     }
-    return contests;
-}
+  }
+};
+
+const extractRelevantPart = (title) => {
+  // Codeforces
+  let match = title.match(
+    /(Educational Codeforces Round \d+|Codeforces Round \d+(\s*\(Div\.? \d+\))?)/i
+  );
+
+  // CodeChef
+  if (!match) {
+    match = title.match(/(Code[Cc]hef Starters \d+)/i);
+  }
+
+  // LeetCode
+  if (!match) {
+    match = title.match(/Leetcode\s*(Biweekly|Weekly)\s*Contest\s*\d+/i);
+  }
+
+  return match ? match[0] : "";
+};
