@@ -209,7 +209,7 @@ const addYtLinks = async () => {
       params: {
         part: "snippet",
         channelId: channelId,
-        maxResults: 5,
+        maxResults: 13,
         order: "date", // To get the latest videos
         key: process.env.API_KEY,
       },
@@ -219,6 +219,7 @@ const addYtLinks = async () => {
   }
 
   const videos = extractVideos(response.data.items);
+  console.log("videos length: ", videos.length);
 
   await updateContestLinks(videos);
 };
@@ -231,37 +232,114 @@ const extractVideos = (responseData) => {
 };
 
 const updateContestLinks = async (videos) => {
+  // Get all contests once to avoid multiple database queries
+  const allContests = await Contest.find({});
+  
   for (const video of videos) {
-    const relevantPart = extractRelevantPart(video.title);
-    if (relevantPart) {
-      const contest = await Contest.findOne({
-        title: { $regex: relevantPart, $options: "i" },
-      });
-
+    const extractedInfo = extractContestInfo(video.title);
+    
+    if (extractedInfo) {
+      // Find matching contest
+      const contest = findMatchingContest(allContests, extractedInfo);
+      
       if (contest) {
         contest.solutionLink = video.link;
         await contest.save();
-        console.log(`updated contest: ${contest.title}`)
+        console.log(`updated contest: ${contest.title}`);
+      } else {
+        console.log(`No contest found for: ${extractedInfo.fullMatch}`);
       }
     }
   }
 };
 
-const extractRelevantPart = (title) => {
+const extractContestInfo = (title) => {
   // Codeforces
-  let match = title.match(
-    /(Educational Codeforces Round \d+|Codeforces Round \d+(\s*\(Div\.? \d+\))?)/i
-  );
-
+  let match = title.match(/(Educational Codeforces Round \d+|Codeforces Round \d+(\s*\(Div\.?\s*\d+\)|\s*\(Div\s*\d+\)))/i);
+  
+  if (match) {
+    const fullMatch = match[0];
+    
+    // Extract the base part (without division)
+    const basePart = fullMatch.match(/(Educational Codeforces Round \d+|Codeforces Round \d+)/i)[0];
+    
+    // Extract division if present
+    const divMatch = fullMatch.match(/\(Div\.?\s*(\d+)\)/i);
+    const division = divMatch ? parseInt(divMatch[1]) : null;
+    
+    return { platform: 'codeforces', basePart, division, fullMatch };
+  }
+  
   // CodeChef
-  if (!match) {
-    match = title.match(/(Code[Cc]hef Starters \d+)/i);
+  match = title.match(/(?:Code[Cc]hef\s*)?Starters\s*(\d+)/i);
+  
+  if (match) {
+    const fullMatch = match[0];
+    const startersNumber = match[1];
+    
+    return { platform: 'codechef', startersNumber, fullMatch };
   }
-
+  
   // LeetCode
-  if (!match) {
-    match = title.match(/Leetcode\s*(Biweekly|Weekly)\s*Contest\s*\d+/i);
+  match = title.match(/Leetcode\s*(Biweekly|Weekly)\s*Contest\s*(\d+)/i);
+  
+  if (match) {
+    const fullMatch = match[0];
+    const contestType = match[1].toLowerCase();
+    const contestNumber = match[2];
+    
+    return { platform: 'leetcode', contestType, contestNumber, fullMatch };
   }
+  
+  return null;
+};
 
-  return match ? match[0] : "";
+const findMatchingContest = (contests, extractedInfo) => {
+  // Normalize function to handle comparison
+  const normalize = (str) => str.toLowerCase().replace(/\./g, '');
+  
+  if (extractedInfo.platform === 'codeforces') {
+    // For Codeforces, we need to match both the base part and division
+    for (const contest of contests) {
+      const normalizedContestTitle = normalize(contest.title);
+      
+      // Check if contest title contains the base part
+      if (normalizedContestTitle.includes(normalize(extractedInfo.basePart))) {
+        // If we have division info, check if it matches
+        if (extractedInfo.division) {
+          const contestDivMatch = contest.title.match(/\(Div\.?\s*(\d+)\)/i) || 
+                                  contest.title.match(/\(Rated for Div\.?\s*(\d+)\)/i);
+          
+          if (contestDivMatch && parseInt(contestDivMatch[1]) === extractedInfo.division) {
+            return contest;
+          }
+        } else {
+          // If no division in the extracted info, just return the first match
+          return contest;
+        }
+      }
+    }
+  } else if (extractedInfo.platform === 'codechef') {
+    // For CodeChef, match by Starters number
+    for (const contest of contests) {
+      const startersMatch = contest.title.match(/Starters\s*(\d+)/i);
+      
+      if (startersMatch && startersMatch[1] === extractedInfo.startersNumber) {
+        return contest;
+      }
+    }
+  } else if (extractedInfo.platform === 'leetcode') {
+    // For LeetCode, match by contest type and number
+    for (const contest of contests) {
+      const leetcodeMatch = contest.title.match(/Leetcode\s*(Biweekly|Weekly)\s*Contest\s*(\d+)/i);
+      
+      if (leetcodeMatch && 
+          normalize(leetcodeMatch[1]) === extractedInfo.contestType && 
+          leetcodeMatch[2] === extractedInfo.contestNumber) {
+        return contest;
+      }
+    }
+  }
+  
+  return null;
 };
