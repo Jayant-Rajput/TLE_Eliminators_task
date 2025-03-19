@@ -40,47 +40,112 @@ const SignupPage = () => {
   };
 
   if (isSigninUp) {
-    return <h1>Signing up...</h1>;
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="bg-white p-8 rounded-lg shadow-lg">
+          <div className="flex items-center justify-center space-x-2">
+            <div className="w-4 h-4 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0s" }}></div>
+            <div className="w-4 h-4 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+            <div className="w-4 h-4 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+          </div>
+          <h1 className="text-xl font-medium text-center text-gray-700 mt-4">Creating your account...</h1>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100 text-black">
-      <div className="flex w-1/2 max-w-4xl bg-white rounded-lg shadow-md p-6">
-        <div className="w-full p-4">
-          <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">Create Your Account</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-8 m-4">
+        <div className="mb-8 text-center">
+          <h2 className="text-3xl font-bold text-gray-800">Join Us</h2>
+          <p className="text-gray-600 mt-2">Create an account to get started</p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="fullname" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <input 
+              type="text" 
+              id="fullname" 
+              name="fullname" 
+              value={formData.fullname} 
+              onChange={handleChange} 
+              placeholder="Enter your full name" 
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" 
+              required 
+            />
+          </div>
 
-            <div>
-              <label htmlFor="fullname" className="block text-sm font-medium text-gray-700">Full Name</label>
-              <input type="text" id="fullname" name="fullname" value={formData.fullname} onChange={handleChange} placeholder="Enter your full name" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required />
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              name="email" 
+              value={formData.email} 
+              onChange={handleChange} 
+              placeholder="you@example.com" 
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" 
+              required 
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              value={formData.password} 
+              onChange={handleChange} 
+              placeholder="••••••••" 
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" 
+              required 
+            />
+            <p className="text-xs text-gray-500 mt-1">Must be at least 3 characters</p>
+          </div>
+
+          <div className="flex items-center mt-2">
+            <input 
+              type="checkbox" 
+              id="isAdmin" 
+              checked={isAdminChecked} 
+              onChange={(e) => setIsAdminChecked(e.target.checked)} 
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
+            />
+            <label htmlFor="isAdmin" className="ml-2 text-sm text-gray-700">I am an admin</label>
+          </div>
+
+          {isAdminChecked && (
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <label htmlFor="adminPasskey" className="block text-sm font-medium text-gray-700 mb-1">Admin Passkey</label>
+              <input 
+                type="text" 
+                id="adminPasskey" 
+                name="adminPasskey" 
+                value={formData.adminPasskey} 
+                onChange={handleChange} 
+                placeholder="Enter admin passkey" 
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" 
+                required 
+              />
             </div>
+          )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-              <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} placeholder="Enter your email" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-              <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} placeholder="Enter your password" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required />
-            </div>
-
-            <div className="flex items-center mt-2">
-              <input type="checkbox" id="isAdmin" checked={isAdminChecked} onChange={(e) => setIsAdminChecked(e.target.checked)} className="mr-2" />
-              <label htmlFor="isAdmin" className="text-sm text-gray-700">Are you an admin?</label>
-            </div>
-
-            {isAdminChecked && (
-              <div>
-                <label htmlFor="adminPasskey" className="block text-sm font-medium text-gray-700">Admin Passkey</label>
-                <input type="text" id="adminPasskey" name="adminPasskey" value={formData.adminPasskey} onChange={handleChange} placeholder="Enter your admin passkey" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required />
-              </div>
-            )}
-
-            <button type="submit" className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700">
-              Sign Up
-            </button>
-          </form>
+          <button 
+            type="submit" 
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          >
+            Create Account
+          </button>
+        </form>
+        
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account? 
+            <a href="/login" className="ml-1 text-blue-600 hover:text-blue-800 font-medium">Sign in</a>
+          </p>
         </div>
       </div>
     </div>

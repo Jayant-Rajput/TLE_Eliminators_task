@@ -40,7 +40,7 @@ const Navbar = () => {
           {!authUser && <Link to="/login" className="hover:text-gray-300">Login</Link>}
           {authUser && <button className="hover:text-gray-300" onClick={handleLogout}>Logout</button>}
           {authUser && (<button className="hover:text-gray-300" onClick={handleClick}>Add Solutions</button>)}
-          <button onClick={handleToggle}>Toggle Mode</button>
+          <button onClick={handleToggle}>Toggle Theme</button>
 
         </div>
       </div>
